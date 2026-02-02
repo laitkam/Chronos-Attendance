@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos | Attendance Tracker</title>
+    <meta name="description" content="A powerful, lightweight attendance tracking system for modern businesses.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="dark-mode">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i data-lucide="clock"></i>
+                </div>
+                <span class="logo-text">Chronos</span>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="dashboard">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item admin-only" data-tab="employees">
+                    <i data-lucide="users"></i>
+                    <span>Employees</span>
+                </button>
+                <button class="nav-item admin-only" data-tab="departments">
+                    <i data-lucide="building-2"></i>
+                    <span>Departments</span>
+                </button>
+                <button class="nav-item admin-only" data-tab="logs">
+                    <i data-lucide="list"></i>
+                    <span>Attendance Logs</span>
+                </button>
+                <button class="nav-item admin-only" data-tab="reports">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Reports</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="admin-login-btn" class="theme-btn">
+                    <i data-lucide="lock"></i>
+                    <span>Admin Login</span>
+                </button>
+                <button id="admin-logout-btn" class="theme-btn admin-only" style="margin-top: 10px;">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </button>
+                <button id="theme-toggle" class="theme-btn" style="margin-top: 10px;">
+                    <i data-lucide="moon" id="theme-icon"></i>
+                    <span id="theme-text">Dark Mode</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" placeholder="Search anything...">
+                </div>
+                <div class="user-profile">
+                    <div class="date-time">
+                        <span id="current-date">Feb 02, 2026</span>
+                        <span id="current-time">17:37</span>
+                    </div>
+                    <div class="avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin Avatar">
+                    </div>
+                </div>
+            </header>
+
+            <section id="dashboard" class="tab-content active">
+                <div class="dashboard-header">
+                    <h1>Dashboard Overview</h1>
+                    <button class="btn btn-primary" id="btn-check-in-out">
+                        <i data-lucide="log-in"></i>
+                        Quick Check-In
+                    </button>
+                </div>
+
+                <div class="stats-grid admin-only">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <i data-lucide="users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Total Employees</h3>
+                            <p class="stat-value" id="stat-total-employees">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <i data-lucide="user-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Present Today</h3>
+                            <p class="stat-value" id="stat-present-today">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <i data-lucide="user-minus"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Absent Today</h3>
+                            <p class="stat-value" id="stat-absent-today">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <i data-lucide="indian-rupee"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Est. Monthly Payroll</h3>
+                            <p class="stat-value" id="stat-total-payroll">₹0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header admin-only" style="margin-top: 24px;">
+                    <h1>Payroll Summary</h1>
+                </div>
+                <div class="table-container admin-only" style="margin-bottom: 32px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Daily Rate</th>
+                                <th>Days Present</th>
+                                <th>Total Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payroll-list-body">
+                            <!-- Payroll data injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dashboard-charts admin-only">
+                    <!-- Chart removed as requested -->
+                </div>
+
+                <div class="recent-activity" style="margin-top: 24px;">
+                    <h3>Live Status</h3>
+                    <div id="whos-in-container" class="whos-in-grid admin-only" style="margin-bottom: 24px;">
+                        <!-- Live cards go here -->
+                    </div>
+
+                    <h3>Recent Attendance Activity</h3>
+                    <ul class="activity-list" id="recent-activity-list">
+                        <!-- Activities will be injected here -->
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Other tabs will be added later -->
+            <section id="employees" class="tab-content">
+                <div class="section-header">
+                    <h1>Employee Directory</h1>
+                    <button class="btn btn-primary" id="btn-add-employee">
+                        <i data-lucide="user-plus"></i>
+                        Add Employee
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table id="employee-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employee-list-body">
+                            <!-- Employees injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="departments" class="tab-content">
+                <div class="section-header">
+                    <h1>Department Management</h1>
+                    <button class="btn btn-primary" id="btn-add-dept">
+                        <i data-lucide="building-2"></i>
+                        Add Department
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Department Name</th>
+                                <th>Manager</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dept-list-body">
+                            <!-- Departments injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="logs" class="tab-content">
+                <div class="section-header">
+                    <h1>Attendance Logs</h1>
+                    <div class="filter-group">
+                        <input type="date" id="log-date-filter">
+                        <button class="btn btn-secondary">
+                            <i data-lucide="filter"></i>
+                            Filter
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Date</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th class="admin-only">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-list-body">
+                            <!-- Logs injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="reports" class="tab-content">
+                <div class="section-header">
+                    <h1>Generate Reports</h1>
+                </div>
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <i data-lucide="file-text"></i>
+                        <h3>Monthly Summary</h3>
+                        <p>Generate a summary of all employee attendance for the current month.</p>
+                        <button class="btn btn-outline">Download PDF</button>
+                    </div>
+                    <div class="report-card">
+                        <i data-lucide="file-spreadsheet"></i>
+                        <h3>Attendance Export</h3>
+                        <p>Export all attendance data to a CSV file for processing.</p>
+                        <button class="btn btn-outline">Export CSV</button>
+                    </div>
+                </div>
+
+                <div class="section-header admin-only" style="margin-top: 40px;">
+                    <h1>Reports & Exports</h1>
+                </div>
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <i data-lucide="file-text"></i>
+                        <h3>Attendance PDF</h3>
+                        <p>Generate a summary of all employee attendance for the current month.</p>
+                        <button class="btn btn-outline">Download PDF</button>
+                    </div>
+                    <div class="report-card">
+                        <i data-lucide="file-spreadsheet"></i>
+                        <h3>Attendance CSV</h3>
+                        <p>Export all attendance data to a CSV file for processing.</p>
+                        <button class="btn btn-outline">Export CSV</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-employee" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Add New Employee</h2>
+                <button class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <form id="employee-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="emp-name" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="emp-dept" required>
+                        <option value="IT">IT</option>
+                        <option value="HR">HR</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Finance">Finance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="emp-phone" required placeholder="+1 234 567 890">
+                </div>
+                <div class="form-group">
+                    <label>Employee ID</label>
+                    <input type="text" id="emp-id" required placeholder="EMP-001">
+                </div>
+                <div class="form-group">
+                    <label>Daily Salary (₹)</label>
+                    <input type="number" id="emp-salary" required placeholder="500">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-check-in" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Quick Attendance</h2>
+                <button class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <form id="check-in-form">
+                <div class="form-group">
+                    <label>Select Employee</label>
+                    <select id="check-in-employee" required>
+                        <!-- Options injected here -->
+                    </select>
+                </div>
+                <div class="status-preview" id="current-status-preview">
+                    Status: Not Checked In Today
+                </div>
+                <!-- Progress Bar Section -->
+                <div id="shift-progress-container" style="display: none; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+                        <span>Shift Progress</span>
+                        <span id="shift-progress-text">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="shift-progress-bar"></div>
+                    </div>
+                    <p id="shift-duration-spent" style="margin-top: 8px; text-align: center;">0h 0m out of 8h</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-check-in" class="btn btn-success">Check-In</button>
+                    <button type="button" id="btn-check-out" class="btn btn-danger">Check-Out</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="modal-login" class="modal">
+        <div class="modal-content" style="max-width: 350px;">
+            <div class="modal-header">
+                <h2>Admin Login</h2>
+                <button class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="form-group">
+                <label>Enter 6-digit PIN</label>
+                <input type="password" id="admin-pin" maxlength="6" placeholder="******"
+                    style="text-align: center; font-size: 24px; letter-spacing: 10px;">
+            </div>
+            <div id="login-error"
+                style="color: var(--accent-red); margin-bottom: 15px; text-align: center; display: none;">Invalid PIN
+            </div>
+            <div class="modal-footer">
+                <button id="btn-submit-login" class="btn btn-primary" style="width: 100%;">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-log" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Attendance Log</h2>
+                <button class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <form id="edit-log-form">
+                <input type="hidden" id="edit-log-id">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <input type="text" id="edit-log-emp-name" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="edit-log-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Check In Time</label>
+                    <input type="time" id="edit-log-checkin" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Check Out Time</label>
+                    <input type="time" id="edit-log-checkout" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="edit-log-status">
+                        <option value="Present">Present</option>
+                        <option value="Late">Late</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Auto-CO">Auto-CO</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-dept" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Department</h2>
+                <button class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <form id="dept-form">
+                <div class="form-group">
+                    <label>Department Name</label>
+                    <input type="text" id="dept-name" required placeholder="e.g. Engineering">
+                </div>
+                <div class="form-group">
+                    <label>Manager Name</label>
+                    <input type="text" id="dept-manager" placeholder="e.g. Jane Smith">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
