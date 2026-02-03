@@ -76,6 +76,28 @@ const App = {
         this.menuToggle = document.getElementById('menu-toggle');
         this.closeSidebar = document.getElementById('close-sidebar');
         this.sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        // Employee View Elements
+        this.btnEmployeeMode = document.getElementById('btn-employee-mode');
+        this.employeeAttendanceView = document.getElementById('employee-attendance-view');
+        this.mainCheckBtn = document.getElementById('main-check-btn');
+        this.mainCheckText = document.getElementById('main-check-text');
+        this.dispCheckIn = document.getElementById('disp-check-in');
+        this.dispCheckOut = document.getElementById('disp-check-out');
+        this.dispTotalHrs = document.getElementById('disp-total-hrs');
+        this.promTime = document.getElementById('prominent-time');
+        this.promDate = document.getElementById('prominent-date');
+
+        // Personal Stats
+        this.userPresentDays = document.getElementById('user-present-days');
+        this.userAbsentDays = document.getElementById('user-absent-days');
+        this.userTotalSalary = document.getElementById('user-total-salary');
+
+        // Login Fields
+        this.loginUsername = document.getElementById('login-username');
+        this.loginModalFields = document.getElementById('employee-login-fields');
+        this.loginModalTitle = document.getElementById('login-modal-title');
+        this.pinLabel = document.getElementById('pin-label');
     },
 
     bindEvents() {
@@ -122,6 +144,10 @@ const App = {
         this.checkInSelect.addEventListener('change', () => this.updateCheckInStatus());
         this.btnCheckIn.addEventListener('click', () => this.handleCheckIn());
         this.btnCheckOut.addEventListener('click', () => this.handleCheckOut());
+        this.mainCheckBtn.addEventListener('click', () => this.handleProminentCheck());
+
+        // Employee Mode Login
+        this.btnEmployeeMode.addEventListener('click', () => this.showModal('login', { mode: 'employee' }));
 
         // Edit Log Form Submit
         document.getElementById('edit-log-form').addEventListener('submit', (e) => {
@@ -133,6 +159,18 @@ const App = {
         this.menuToggle.addEventListener('click', () => this.toggleSidebar(true));
         this.closeSidebar.addEventListener('click', () => this.toggleSidebar(false));
         this.sidebarOverlay.addEventListener('click', () => this.toggleSidebar(false));
+
+        // PIN visibility toggles
+        const toggleEmpPin = document.getElementById('toggle-emp-pin');
+        if (toggleEmpPin) {
+            toggleEmpPin.addEventListener('click', () => {
+                const pinInput = document.getElementById('emp-pin');
+                const type = pinInput.type === 'password' ? 'text' : 'password';
+                pinInput.type = type;
+                toggleEmpPin.innerHTML = `<i data-lucide="${type === 'password' ? 'eye' : 'eye-off'}"></i>`;
+                lucide.createIcons();
+            });
+        }
     },
 
     switchTab(tabId) {
@@ -191,20 +229,47 @@ const App = {
                 document.getElementById('emp-phone').value = data.phone;
                 document.getElementById('emp-id').value = data.empCode;
                 document.getElementById('emp-salary').value = data.salary || 0;
+                document.getElementById('emp-pin').value = data.pin || '';
             } else {
                 document.getElementById('modal-title').innerText = 'Add New Employee';
                 this.employeeForm.reset();
                 document.getElementById('edit-id').value = '';
+                // Pre-fill a random 4-digit PIN for convenience
+                document.getElementById('emp-pin').value = Math.floor(1000 + Math.random() * 9000);
             }
+            // Reset PIN visibility to password
+            document.getElementById('emp-pin').type = 'password';
+            const toggleIcon = document.getElementById('toggle-emp-pin');
+            if (toggleIcon) toggleIcon.innerHTML = '<i data-lucide="eye"></i>';
+            lucide.createIcons();
         } else if (type === 'check-in') {
             await this.populateEmployeeSelect();
             this.modalCheckIn.classList.add('active');
             await this.updateCheckInStatus();
         } else if (type === 'login') {
+            const mode = data && data.mode === 'employee' ? 'employee' : 'admin';
             this.modalLogin.classList.add('active');
             this.loginError.style.display = 'none';
             this.pinInput.value = '';
-            this.pinInput.focus();
+
+            if (mode === 'employee') {
+                this.loginModalTitle.innerText = 'Employee Login';
+                this.loginModalFields.style.display = 'block';
+                this.pinLabel.innerText = 'Enter PIN';
+                this.pinInput.maxLength = 4;
+                this.pinInput.placeholder = '****';
+                this.pinInput.style.letterSpacing = '15px';
+                this.loginUsername.focus();
+            } else {
+                this.loginModalTitle.innerText = 'Admin Login';
+                this.loginModalFields.style.display = 'none';
+                this.pinLabel.innerText = 'Enter 6-digit PIN';
+                this.pinInput.maxLength = 6;
+                this.pinInput.placeholder = '******';
+                this.pinInput.style.letterSpacing = '10px';
+                this.pinInput.focus();
+            }
+            this.loginSubmitBtn.dataset.mode = mode;
         } else if (type === 'edit-log') {
             this.modalEditLog.classList.add('active');
             if (data) {
@@ -231,30 +296,70 @@ const App = {
 
     checkAuth() {
         const isAdmin = sessionStorage.getItem('chronos_is_admin') === 'true';
+        const isEmployee = sessionStorage.getItem('chronos_user') !== null;
+
         if (isAdmin) {
             document.body.classList.add('is-admin');
+            document.body.classList.remove('is-employee');
+        } else if (isEmployee) {
+            document.body.classList.remove('is-admin');
+            document.body.classList.add('is-employee');
+            this.switchTab('dashboard');
         } else {
             document.body.classList.remove('is-admin');
-            this.switchTab('dashboard'); // Default tab for everyone
+            document.body.classList.remove('is-employee');
+            this.switchTab('dashboard');
         }
     },
 
+    async handleProminentCheck() {
+        const currentUser = JSON.parse(sessionStorage.getItem('chronos_user'));
+        if (!currentUser) return;
+
+        const attendance = await Storage.getAttendance();
+        const today = new Date().toISOString().split('T')[0];
+        const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
+
+        if (!record) {
+            await this.handleCheckIn(currentUser.id);
+        } else if (!record.checkOut) {
+            await this.handleCheckOut(currentUser.id);
+        }
+        await this.renderAll();
+    },
+
     async handleLogin() {
+        const mode = this.loginSubmitBtn.dataset.mode;
         const pin = this.pinInput.value;
-        if (pin === '123456') {
-            sessionStorage.setItem('chronos_is_admin', 'true');
-            this.hideModals();
-            this.checkAuth();
-            await this.renderAll();
+
+        if (mode === 'admin') {
+            if (pin === '123456') {
+                sessionStorage.setItem('chronos_is_admin', 'true');
+                sessionStorage.removeItem('chronos_user');
+                this.hideModals();
+                this.checkAuth();
+                await this.renderAll();
+            } else {
+                this.loginError.style.display = 'block';
+            }
         } else {
-            this.loginError.style.display = 'block';
-            this.pinInput.value = '';
-            this.pinInput.focus();
+            const username = this.loginUsername.value;
+            const emp = await Storage.loginEmployee(username, pin);
+            if (emp) {
+                sessionStorage.setItem('chronos_user', JSON.stringify(emp));
+                sessionStorage.setItem('chronos_is_admin', 'false');
+                this.hideModals();
+                this.checkAuth();
+                await this.renderAll();
+            } else {
+                this.loginError.style.display = 'block';
+            }
         }
     },
 
     async handleLogout() {
         sessionStorage.removeItem('chronos_is_admin');
+        sessionStorage.removeItem('chronos_user');
         this.checkAuth();
         await this.renderAll();
     },
@@ -334,7 +439,8 @@ const App = {
             dept: document.getElementById('emp-dept').value,
             phone: document.getElementById('emp-phone').value,
             empCode: document.getElementById('emp-id').value,
-            salary: parseFloat(document.getElementById('emp-salary').value) || 0
+            salary: parseFloat(document.getElementById('emp-salary').value) || 0,
+            pin: document.getElementById('emp-pin').value || '1234'
         };
 
         if (id) {
@@ -348,8 +454,8 @@ const App = {
         await this.renderAll();
     },
 
-    async handleCheckIn() {
-        const empId = this.checkInSelect.value;
+    async handleCheckIn(id = null) {
+        const empId = id || this.checkInSelect.value;
         const result = await Storage.checkIn(empId);
         if (result.success) {
             this.showNotification('Check-in Successful! Have a great shift.', 'success');
@@ -360,8 +466,8 @@ const App = {
         }
     },
 
-    async handleCheckOut() {
-        const empId = this.checkInSelect.value;
+    async handleCheckOut(id = null) {
+        const empId = id || this.checkInSelect.value;
         const result = await Storage.checkOut(empId);
         if (result.success) {
             this.showNotification('Check-out Successful! See you tomorrow.', 'success');
@@ -393,6 +499,11 @@ const App = {
         const now = new Date();
         this.dateEl.innerText = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
         this.timeEl.innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+        if (this.promTime) {
+            this.promTime.innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            this.promDate.innerText = now.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric', weekday: 'long' });
+        }
     },
 
     async renderAll() {
@@ -404,8 +515,51 @@ const App = {
             this.renderRecentActivity(),
             this.renderWhosIn(),
             this.renderDeptList(),
-            this.renderPayroll()
+            this.renderPayroll(),
+            this.renderProminentView()
         ]);
+    },
+
+    async renderProminentView() {
+        const currentUser = JSON.parse(sessionStorage.getItem('chronos_user'));
+        if (!currentUser) {
+            this.employeeAttendanceView.style.display = 'none';
+            return;
+        }
+
+        this.employeeAttendanceView.style.display = 'block';
+        const attendance = await Storage.getAttendance();
+        const today = new Date().toISOString().split('T')[0];
+        const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
+
+        if (!record) {
+            this.mainCheckBtn.classList.remove('checked-out');
+            this.mainCheckText.innerText = 'Check In';
+            this.dispCheckIn.innerText = '--:--';
+            this.dispCheckOut.innerText = '--:--';
+            this.dispTotalHrs.innerText = '00:00';
+        } else if (!record.checkOut) {
+            this.mainCheckBtn.classList.add('checked-out');
+            this.mainCheckText.innerText = 'Check Out';
+            this.dispCheckIn.innerText = record.checkIn;
+            this.dispCheckOut.innerText = '--:--';
+            this.dispTotalHrs.innerText = this.calculateDuration(record.checkIn, new Date().toLocaleTimeString('en-US', { hour12: false }));
+        } else {
+            this.mainCheckBtn.style.opacity = '0.5';
+            this.mainCheckBtn.disabled = true;
+            this.mainCheckText.innerText = 'Done';
+            this.dispCheckIn.innerText = record.checkIn;
+            this.dispCheckOut.innerText = record.checkOut;
+            this.dispTotalHrs.innerText = this.calculateDuration(record.checkIn, record.checkOut);
+        }
+
+        // Render Personal Stats
+        const stats = await Storage.getEmployeeStats(currentUser.id);
+        const totalSalary = (stats.present * (currentUser.salary || 0)).toFixed(0);
+
+        this.userPresentDays.innerText = stats.present;
+        this.userAbsentDays.innerText = stats.absent;
+        this.userTotalSalary.innerText = `₹${totalSalary}`;
     },
 
     async renderPayroll() {
@@ -414,8 +568,13 @@ const App = {
         const payrollBody = document.getElementById('payroll-list-body');
         if (!payrollBody) return;
 
+        // Unique dates to calculate absence
+        const uniqueDates = [...new Set(attendance.map(a => a.date))].length || 1;
+
         payrollBody.innerHTML = employees.map(emp => {
-            const daysPresent = attendance.filter(a => a.employeeId === emp.id && a.status !== 'Absent').length;
+            const empAtt = attendance.filter(a => a.employeeId === emp.id);
+            const daysPresent = empAtt.length;
+            const daysAbsent = Math.max(0, uniqueDates - daysPresent);
             const totalEarnings = (daysPresent * (emp.salary || 0)).toFixed(2);
 
             return `
@@ -423,6 +582,7 @@ const App = {
                     <td>${emp.name}</td>
                     <td>₹${emp.salary || 0}</td>
                     <td>${daysPresent}</td>
+                    <td style="color: var(--accent-red)">${daysAbsent}</td>
                     <td><strong>₹${totalEarnings}</strong></td>
                 </tr>
             `;

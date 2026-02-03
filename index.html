@@ -93,10 +93,78 @@
             <section id="dashboard" class="tab-content active">
                 <div class="dashboard-header">
                     <h1>Dashboard Overview</h1>
-                    <button class="btn btn-primary" id="btn-check-in-out">
-                        <i data-lucide="log-in"></i>
-                        Quick Check-In
-                    </button>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="btn-employee-mode">
+                            <i data-lucide="user"></i>
+                            Employee Login
+                        </button>
+                        <button class="btn btn-primary admin-only" id="btn-check-in-out">
+                            <i data-lucide="log-in"></i>
+                            Quick Check-In
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEW: Prominent Employee Check-in Section -->
+                <div id="employee-attendance-view" class="employee-view" style="display: none;">
+                    <div class="attendance-card-prominent">
+                        <div class="clock-display">
+                            <h2 id="prominent-time">00:00:00</h2>
+                            <p id="prominent-date">Month 00, Year Day</p>
+                        </div>
+
+                        <div class="check-in-circle-container">
+                            <button id="main-check-btn" class="check-btn-circular">
+                                <div class="btn-ripple"></div>
+                                <div class="btn-content">
+                                    <i data-lucide="touchpad"></i>
+                                    <span id="main-check-text">Check In</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div class="attendance-stats-row">
+                            <div class="att-stat-item">
+                                <div class="att-icon"><i data-lucide="clock-arrow-up"></i></div>
+                                <span class="att-value" id="disp-check-in">--:--</span>
+                                <span class="att-label">Check In</span>
+                            </div>
+                            <div class="att-stat-item">
+                                <div class="att-icon"><i data-lucide="clock-arrow-down"></i></div>
+                                <span class="att-value" id="disp-check-out">--:--</span>
+                                <span class="att-label">Check Out</span>
+                            </div>
+                            <div class="att-stat-item">
+                                <div class="att-icon"><i data-lucide="timer"></i></div>
+                                <span class="att-value" id="disp-total-hrs">00:00</span>
+                                <span class="att-label">Total Hrs</span>
+                            </div>
+                        </div>
+
+                        <div class="employee-personal-stats stats-grid" style="margin-top: 30px;">
+                            <div class="stat-card">
+                                <div class="stat-icon green"><i data-lucide="calendar-check"></i></div>
+                                <div class="stat-info">
+                                    <h3>Days Present</h3>
+                                    <p class="stat-value" id="user-present-days">0</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon red"><i data-lucide="calendar-x"></i></div>
+                                <div class="stat-info">
+                                    <h3>Days Absent</h3>
+                                    <p class="stat-value" id="user-absent-days">0</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon purple"><i data-lucide="indian-rupee"></i></div>
+                                <div class="stat-info">
+                                    <h3>Total Salary</h3>
+                                    <p class="stat-value" id="user-total-salary">₹0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="stats-grid admin-only">
@@ -147,7 +215,8 @@
                             <tr>
                                 <th>Employee</th>
                                 <th>Daily Rate</th>
-                                <th>Days Present</th>
+                                <th>Present</th>
+                                <th>Absent</th>
                                 <th>Total Earnings</th>
                             </tr>
                         </thead>
@@ -332,6 +401,16 @@
                     <label>Daily Salary (₹)</label>
                     <input type="number" id="emp-salary" required placeholder="500">
                 </div>
+                <div class="form-group">
+                    <label>Login PIN (4-6 digits)</label>
+                    <div style="position: relative;">
+                        <input type="password" id="emp-pin" required placeholder="1234">
+                        <button type="button" id="toggle-emp-pin"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer;">
+                            <i data-lucide="eye"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary close-modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Employee</button>
@@ -380,11 +459,17 @@
     <div id="modal-login" class="modal">
         <div class="modal-content" style="max-width: 350px;">
             <div class="modal-header">
-                <h2>Admin Login</h2>
+                <h2 id="login-modal-title">Admin Login</h2>
                 <button class="close-modal"><i data-lucide="x"></i></button>
             </div>
+            <div id="employee-login-fields" style="display: none;">
+                <div class="form-group">
+                    <label>Employee ID / Name</label>
+                    <input type="text" id="login-username" placeholder="EMP-001">
+                </div>
+            </div>
             <div class="form-group">
-                <label>Enter 6-digit PIN</label>
+                <label id="pin-label">Enter 6-digit PIN</label>
                 <input type="password" id="admin-pin" maxlength="6" placeholder="******"
                     style="text-align: center; font-size: 24px; letter-spacing: 10px;">
             </div>

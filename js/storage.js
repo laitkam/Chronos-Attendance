@@ -25,9 +25,9 @@ const Storage = {
         if (!data) {
             // Initial dummy data if cloud is empty
             const initial = {
-                'EMP-1': { id: 'EMP-1', name: 'Alex Thompson', dept: 'IT', phone: '+1 555-0101', empCode: 'IT-001', salary: 1500 },
-                'EMP-2': { id: 'EMP-2', name: 'Sarah Miller', dept: 'HR', phone: '+1 555-0102', empCode: 'HR-023', salary: 1200 },
-                'EMP-3': { id: 'EMP-3', name: 'David Chen', dept: 'Sales', phone: '+1 555-0103', empCode: 'SL-005', salary: 1000 }
+                'EMP-1': { id: 'EMP-1', name: 'Alex Thompson', dept: 'IT', phone: '+1 555-0101', empCode: 'IT-001', salary: 1500, pin: '1234' },
+                'EMP-2': { id: 'EMP-2', name: 'Sarah Miller', dept: 'HR', phone: '+1 555-0102', empCode: 'HR-023', salary: 1200, pin: '1234' },
+                'EMP-3': { id: 'EMP-3', name: 'David Chen', dept: 'Sales', phone: '+1 555-0103', empCode: 'SL-005', salary: 1000, pin: '1234' }
             };
             await db.ref('employees').set(initial);
             return Object.values(initial);
@@ -47,7 +47,10 @@ const Storage = {
         }
 
         // Return as array for the UI
-        return Object.values(data);
+        return Object.values(data).map(emp => ({
+            ...emp,
+            pin: emp.pin || '1234'
+        }));
     },
 
     async saveEmployees(employees) {
@@ -158,6 +161,28 @@ const Storage = {
             present: presentToday,
             absent: totalEmployees - presentToday,
             late: attendance.filter(a => a.date === today && a.checkIn > '09:00:00').length
+        };
+    },
+
+    async loginEmployee(username, pin) {
+        const employees = await this.getEmployees();
+        const emp = employees.find(e => (e.empCode === username || e.name === username) && e.pin === pin);
+        return emp || null;
+    },
+
+    async getEmployeeStats(employeeId) {
+        const attendance = await this.getAttendance();
+        const empAttendance = attendance.filter(a => a.employeeId === employeeId);
+
+        const daysPresent = empAttendance.length;
+        // For simplicity, let's assume total days as the number of unique dates in attendance database for now,
+        // or just a fixed number like 30 for the month.
+        // Better: count unique dates in the whole attendance table.
+        const uniqueDates = [...new Set(attendance.map(a => a.date))].length || 1;
+
+        return {
+            present: daysPresent,
+            absent: Math.max(0, uniqueDates - daysPresent)
         };
     },
 
