@@ -18,8 +18,14 @@
 <body class="dark-mode">
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header-mobile">
+                <span class="logo-text">Chronos</span>
+                <button id="close-sidebar" class="close-sidebar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="logo-container desktop-only">
                 <div class="logo-icon">
                     <i data-lucide="clock"></i>
                 </div>
@@ -66,6 +72,9 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-bar">
+                <button id="menu-toggle" class="menu-toggle">
+                    <i data-lucide="menu"></i>
+                </button>
                 <div class="search-bar">
                     <i data-lucide="search"></i>
                     <input type="text" placeholder="Search anything...">
@@ -285,6 +294,7 @@
                 </div>
             </section>
         </main>
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
     </div>
 
     <!-- Modals -->

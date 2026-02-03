@@ -70,6 +70,12 @@ const App = {
         this.btnAddDept = document.getElementById('btn-add-dept');
         this.deptForm = document.getElementById('dept-form');
         this.deptListBody = document.getElementById('dept-list-body');
+
+        // Mobile Menu
+        this.sidebar = document.getElementById('sidebar');
+        this.menuToggle = document.getElementById('menu-toggle');
+        this.closeSidebar = document.getElementById('close-sidebar');
+        this.sidebarOverlay = document.getElementById('sidebar-overlay');
     },
 
     bindEvents() {
@@ -122,6 +128,11 @@ const App = {
             e.preventDefault();
             this.handleEditLogSubmit();
         });
+
+        // Mobile Menu Events
+        this.menuToggle.addEventListener('click', () => this.toggleSidebar(true));
+        this.closeSidebar.addEventListener('click', () => this.toggleSidebar(false));
+        this.sidebarOverlay.addEventListener('click', () => this.toggleSidebar(false));
     },
 
     switchTab(tabId) {
@@ -131,6 +142,20 @@ const App = {
         this.tabContents.forEach(content => {
             content.classList.toggle('active', content.id === tabId);
         });
+        // Close sidebar on mobile after selection
+        if (window.innerWidth <= 1024) {
+            this.toggleSidebar(false);
+        }
+    },
+
+    toggleSidebar(show) {
+        if (show) {
+            this.sidebar.classList.add('active');
+            this.sidebarOverlay.style.display = 'block';
+        } else {
+            this.sidebar.classList.remove('active');
+            this.sidebarOverlay.style.display = 'none';
+        }
     },
 
     toggleTheme() {
