@@ -20,17 +20,33 @@ const Storage = {
 
     async getEmployees() {
         const snapshot = await db.ref('employees').once('value');
-        const data = snapshot.val();
+        let data = snapshot.val();
+
         if (!data) {
-            // Initial data if cloud is empty
-            const initial = [
-                { id: 'EMP-1', name: 'Alex Thompson', dept: 'IT', phone: '+1 555-0101', empCode: 'IT-001', salary: 1500 },
-                { id: 'EMP-2', name: 'Sarah Miller', dept: 'HR', phone: '+1 555-0102', empCode: 'HR-023', salary: 1200 },
-                { id: 'EMP-3', name: 'David Chen', dept: 'Sales', phone: '+1 555-0103', empCode: 'SL-005', salary: 1000 }
-            ];
+            // Initial dummy data if cloud is empty
+            const initial = {
+                'EMP-1': { id: 'EMP-1', name: 'Alex Thompson', dept: 'IT', phone: '+1 555-0101', empCode: 'IT-001', salary: 1500 },
+                'EMP-2': { id: 'EMP-2', name: 'Sarah Miller', dept: 'HR', phone: '+1 555-0102', empCode: 'HR-023', salary: 1200 },
+                'EMP-3': { id: 'EMP-3', name: 'David Chen', dept: 'Sales', phone: '+1 555-0103', empCode: 'SL-005', salary: 1000 }
+            };
             await db.ref('employees').set(initial);
-            return initial;
+            return Object.values(initial);
         }
+
+        // MIGRATION: If data is an array (which happens with initial dummy data),
+        // convert it to an object structure so that deleteEmployee(id) can find the keys.
+        if (Array.isArray(data)) {
+            const migrated = {};
+            data.forEach(emp => {
+                if (emp && emp.id) {
+                    migrated[emp.id] = emp;
+                }
+            });
+            await db.ref('employees').set(migrated);
+            data = migrated;
+        }
+
+        // Return as array for the UI
         return Object.values(data);
     },
 
@@ -178,6 +194,14 @@ const Storage = {
 
     async deleteAttendanceRecord(id) {
         await db.ref('attendance/' + id).remove();
+    },
+
+    // Emergency reset if dummy data gets stuck
+    async resetData() {
+        if (confirm('DANGER: This will delete ALL employees and logs. Continue?')) {
+            await db.ref('/').remove();
+            location.reload();
+        }
     }
 };
 
@@ -187,3 +211,6 @@ db.ref().on('value', () => {
         window.App.renderAll();
     }
 });
+
+// Expose reset to console just in case
+window.resetChronosData = () => Storage.resetData();

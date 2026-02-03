@@ -681,7 +681,7 @@ tr:last-child td {
     height: 100%;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(5px);
-    z-index: 1000;
+    z-index: 6000;
     align-items: center;
     justify-content: center;
 }

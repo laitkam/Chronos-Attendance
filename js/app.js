@@ -175,6 +175,11 @@ const App = {
     },
 
     async showModal(type, data = null) {
+        // Auto-close sidebar on mobile when a modal opens
+        if (window.innerWidth <= 1024) {
+            this.toggleSidebar(false);
+        }
+
         if (type === 'employee') {
             await this.populateDeptSelect();
             this.modalEmployee.classList.add('active');
