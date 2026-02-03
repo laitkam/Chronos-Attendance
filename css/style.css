@@ -51,7 +51,35 @@ body.is-admin .dashboard-charts.admin-only {
     display: grid !important;
 }
 
-body.is-admin #admin-login-btn {
+body.is-admin #admin-login-btn,
+body.is-employee #admin-login-btn,
+body.is-admin #btn-employee-mode,
+body.is-employee #btn-employee-mode {
+    display: none !important;
+}
+
+.logged-in-only {
+    display: none !important;
+}
+
+body.is-admin .logged-in-only,
+body.is-employee .logged-in-only {
+    display: block !important;
+}
+
+body.is-admin .theme-btn.logged-in-only,
+body.is-employee .theme-btn.logged-in-only,
+body.is-admin .nav-item.logged-in-only,
+body.is-employee .nav-item.logged-in-only {
+    display: flex !important;
+}
+
+.logged-out-only {
+    display: flex !important;
+}
+
+body.is-admin .logged-out-only,
+body.is-employee .logged-out-only {
     display: none !important;
 }
 

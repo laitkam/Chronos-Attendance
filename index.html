@@ -54,11 +54,11 @@
                 </button>
             </nav>
             <div class="sidebar-footer">
-                <button id="admin-login-btn" class="theme-btn">
+                <button id="admin-login-btn" class="theme-btn logged-out-only">
                     <i data-lucide="lock"></i>
                     <span>Admin Login</span>
                 </button>
-                <button id="admin-logout-btn" class="theme-btn admin-only" style="margin-top: 10px;">
+                <button id="admin-logout-btn" class="theme-btn logged-in-only" style="margin-top: 10px;">
                     <i data-lucide="log-out"></i>
                     <span>Logout</span>
                 </button>
@@ -81,11 +81,12 @@
                 </div>
                 <div class="user-profile">
                     <div class="date-time">
+                        <span id="current-user-name" style="font-weight: 600; display: block;">Guest</span>
                         <span id="current-date">Feb 02, 2026</span>
-                        <span id="current-time">17:37</span>
                     </div>
                     <div class="avatar">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin Avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Guest" alt="User Avatar"
+                            id="current-user-avatar">
                     </div>
                 </div>
             </header>
@@ -230,9 +231,9 @@
                     <!-- Chart removed as requested -->
                 </div>
 
-                <div class="recent-activity" style="margin-top: 24px;">
+                <div class="recent-activity logged-in-only" style="margin-top: 24px;">
                     <h3>Live Status</h3>
-                    <div id="whos-in-container" class="whos-in-grid admin-only" style="margin-bottom: 24px;">
+                    <div id="whos-in-container" class="whos-in-grid" style="margin-bottom: 32px;">
                         <!-- Live cards go here -->
                     </div>
 

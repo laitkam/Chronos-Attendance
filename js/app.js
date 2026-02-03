@@ -98,6 +98,10 @@ const App = {
         this.loginModalFields = document.getElementById('employee-login-fields');
         this.loginModalTitle = document.getElementById('login-modal-title');
         this.pinLabel = document.getElementById('pin-label');
+
+        // User Profile Elements
+        this.userNameEl = document.getElementById('current-user-name');
+        this.userAvatarEl = document.getElementById('current-user-avatar');
     },
 
     bindEvents() {
@@ -259,7 +263,16 @@ const App = {
                 this.pinInput.maxLength = 4;
                 this.pinInput.placeholder = '****';
                 this.pinInput.style.letterSpacing = '15px';
-                this.loginUsername.focus();
+
+                // Pre-fill last used username
+                const lastUser = localStorage.getItem('chronos_last_username');
+                if (lastUser) {
+                    this.loginUsername.value = lastUser;
+                    this.pinInput.focus();
+                } else {
+                    this.loginUsername.value = '';
+                    this.loginUsername.focus();
+                }
             } else {
                 this.loginModalTitle.innerText = 'Admin Login';
                 this.loginModalFields.style.display = 'none';
@@ -301,13 +314,20 @@ const App = {
         if (isAdmin) {
             document.body.classList.add('is-admin');
             document.body.classList.remove('is-employee');
+            if (this.userNameEl) this.userNameEl.innerText = 'Administrator';
+            if (this.userAvatarEl) this.userAvatarEl.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin';
         } else if (isEmployee) {
+            const user = JSON.parse(sessionStorage.getItem('chronos_user'));
             document.body.classList.remove('is-admin');
             document.body.classList.add('is-employee');
+            if (this.userNameEl && user) this.userNameEl.innerText = user.name;
+            if (this.userAvatarEl && user) this.userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`;
             this.switchTab('dashboard');
         } else {
             document.body.classList.remove('is-admin');
             document.body.classList.remove('is-employee');
+            if (this.userNameEl) this.userNameEl.innerText = 'Guest';
+            if (this.userAvatarEl) this.userAvatarEl.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest';
             this.switchTab('dashboard');
         }
     },
@@ -346,6 +366,7 @@ const App = {
             const username = this.loginUsername.value;
             const emp = await Storage.loginEmployee(username, pin);
             if (emp) {
+                localStorage.setItem('chronos_last_username', username);
                 sessionStorage.setItem('chronos_user', JSON.stringify(emp));
                 sessionStorage.setItem('chronos_is_admin', 'false');
                 this.hideModals();
@@ -497,8 +518,8 @@ const App = {
 
     updateDateTime() {
         const now = new Date();
-        this.dateEl.innerText = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-        this.timeEl.innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        if (this.dateEl) this.dateEl.innerText = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        if (this.timeEl) this.timeEl.innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
         if (this.promTime) {
             this.promTime.innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -533,12 +554,16 @@ const App = {
         const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
 
         if (!record) {
+            this.mainCheckBtn.style.opacity = '1';
+            this.mainCheckBtn.disabled = false;
             this.mainCheckBtn.classList.remove('checked-out');
             this.mainCheckText.innerText = 'Check In';
             this.dispCheckIn.innerText = '--:--';
             this.dispCheckOut.innerText = '--:--';
             this.dispTotalHrs.innerText = '00:00';
         } else if (!record.checkOut) {
+            this.mainCheckBtn.style.opacity = '1';
+            this.mainCheckBtn.disabled = false;
             this.mainCheckBtn.classList.add('checked-out');
             this.mainCheckText.innerText = 'Check Out';
             this.dispCheckIn.innerText = record.checkIn;
