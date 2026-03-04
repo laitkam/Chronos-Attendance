@@ -114,7 +114,7 @@ const Storage = {
 
     async checkIn(employeeId) {
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA');
         const attendance = await this.getAttendance();
 
         const existingRecord = attendance.find(a => a.employeeId === employeeId && a.date === today);
@@ -138,7 +138,7 @@ const Storage = {
 
     async checkOut(employeeId) {
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA');
         const attendance = await this.getAttendance();
 
         const record = attendance.find(a => a.employeeId === employeeId && a.date === today);
@@ -155,7 +155,7 @@ const Storage = {
         const attendance = await this.getAttendance();
 
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA'); // "YYYY-MM-DD" in local time
         const currentMonth = today.substring(0, 7); // "YYYY-MM"
 
         const presentToday = attendance.filter(a => a.date === today).length;
@@ -204,7 +204,7 @@ const Storage = {
     async getEmployeeStats(employeeId, monthYear = null) {
         const attendance = await this.getAttendance();
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = now.toLocaleDateString('en-CA').substring(0, 7);
         const targetMonth = monthYear || currentMonth;
 
         const empAttendance = attendance.filter(a => a.employeeId === employeeId && a.date.startsWith(targetMonth));
@@ -226,7 +226,7 @@ const Storage = {
         const employees = await this.getEmployees();
         const attendance = await this.getAttendance();
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = now.toLocaleDateString('en-CA').substring(0, 7);
         const targetMonth = monthYear || currentMonth;
 
         const monthAttendance = attendance.filter(a => a.date.startsWith(targetMonth));
@@ -248,7 +248,7 @@ const Storage = {
         const attendance = await this.getAttendance();
         const employees = await this.getEmployees();
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA');
         const activeIds = attendance
             .filter(a => a.date === today && !a.checkOut)
             .map(a => a.employeeId);
@@ -259,7 +259,7 @@ const Storage = {
     async autoCleanup() {
         const attendance = await this.getAttendance();
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA');
         let changed = false;
 
         attendance.forEach(async (a) => {

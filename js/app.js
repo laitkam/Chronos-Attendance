@@ -112,8 +112,24 @@ const App = {
         this.userNameEl = document.getElementById('current-user-name');
         this.userAvatarEl = document.getElementById('current-user-avatar');
 
+        // Avatar Elements
+        this.empAvatarInput = document.getElementById('emp-avatar-input');
+        this.empAvatarPreview = document.getElementById('emp-avatar-preview');
+
         // Global Filter
         this.monthSelector = document.getElementById('global-month-selector');
+
+        // Restore missing Mobile UI caches
+        this.mobileEmpName = document.getElementById('mobile-emp-name');
+        this.mobileEmpCode = document.getElementById('mobile-emp-code');
+        this.mobileEmpAvatar = document.getElementById('mobile-emp-avatar');
+        this.mainCheckBtnMobile = document.getElementById('main-check-btn-mobile');
+        this.mainCheckTextMobile = document.getElementById('main-check-text-mobile');
+        this.mobileDispCheckIn = document.getElementById('mobile-disp-check-in');
+        this.mobileDispCheckOut = document.getElementById('mobile-disp-check-out');
+        this.calendarStrip = document.getElementById('calendar-strip');
+        this.mobileRecentActivity = document.getElementById('mobile-recent-activity');
+        this.mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
     },
 
     bindEvents() {
@@ -188,6 +204,11 @@ const App = {
             });
         }
 
+        // Avatar Change Event
+        if (this.empAvatarInput) {
+            this.empAvatarInput.addEventListener('change', (e) => this.handleAvatarChange(e));
+        }
+
         // Global Month Selector
         if (this.monthSelector) {
             this.monthSelector.addEventListener('change', () => this.renderAll());
@@ -205,7 +226,7 @@ const App = {
         selector.innerHTML = '';
         for (let i = 0; i < 12; i++) {
             const date = new Date(currentYear, currentMonth - i, 1);
-            const monthVal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const monthVal = date.toLocaleDateString('en-CA').substring(0, 7);
             const monthLabel = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
             const option = document.createElement('option');
@@ -215,8 +236,7 @@ const App = {
         }
 
         // Set default to current month
-        const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        selector.value = defaultMonth;
+        selector.value = now.toLocaleDateString('en-CA').substring(0, 7);
     },
 
     switchTab(tabId) {
@@ -276,10 +296,12 @@ const App = {
                 document.getElementById('emp-id').value = data.empCode;
                 document.getElementById('emp-salary').value = data.salary || 0;
                 document.getElementById('emp-pin').value = data.pin || '';
+                this.empAvatarPreview.src = data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`;
             } else {
                 document.getElementById('modal-title').innerText = 'Add New Employee';
                 this.employeeForm.reset();
                 document.getElementById('edit-id').value = '';
+                this.empAvatarPreview.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=new';
                 // Pre-fill a random 4-digit PIN for convenience
                 document.getElementById('emp-pin').value = Math.floor(1000 + Math.random() * 9000);
             }
@@ -363,7 +385,9 @@ const App = {
             document.body.classList.remove('is-admin');
             document.body.classList.add('is-employee');
             if (this.userNameEl && user) this.userNameEl.innerText = user.name;
-            if (this.userAvatarEl && user) this.userAvatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`;
+            if (this.userAvatarEl && user) {
+                this.userAvatarEl.src = user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`;
+            }
             this.switchTab('dashboard');
         } else {
             document.body.classList.remove('is-admin');
@@ -380,7 +404,7 @@ const App = {
 
         const attendance = await Storage.getAttendance();
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA');
         const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
 
         if (!record) {
@@ -505,18 +529,71 @@ const App = {
             phone: document.getElementById('emp-phone').value,
             empCode: document.getElementById('emp-id').value,
             salary: parseFloat(document.getElementById('emp-salary').value) || 0,
-            pin: document.getElementById('emp-pin').value || '1234'
+            pin: document.getElementById('emp-pin').value || '1234',
+            avatar: this.empAvatarPreview.src.startsWith('data:') ? this.empAvatarPreview.src : (this.empAvatarPreview.src.includes('dicebear') ? '' : this.empAvatarPreview.src)
         };
 
         if (id) {
             employee.id = id;
             await Storage.updateEmployee(employee);
+
+            // Sync session if updating self
+            const currentUser = JSON.parse(sessionStorage.getItem('chronos_user'));
+            if (currentUser && currentUser.id === id) {
+                sessionStorage.setItem('chronos_user', JSON.stringify({ ...currentUser, ...employee }));
+                this.checkAuth();
+            }
         } else {
             await Storage.addEmployee(employee);
         }
 
         this.hideModals();
         await this.renderAll();
+    },
+
+    handleAvatarChange(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Visual feedback
+        this.showNotification('Optimizing image...', 'info');
+
+        const reader = new FileReader();
+        reader.onerror = () => this.showNotification('Error reading file.', 'error');
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onerror = () => this.showNotification('Invalid image file.', 'error');
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 200;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    }
+                } else {
+                    if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Compress to JPEG for smaller storage
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                this.empAvatarPreview.src = dataUrl;
+                this.showNotification('Profile preview updated!', 'success');
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
     },
 
     async handleCheckIn(id = null) {
@@ -595,7 +672,7 @@ const App = {
         this.employeeAttendanceView.style.display = 'block';
         const attendance = await Storage.getAttendance();
         const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = now.toLocaleDateString('en-CA');
         const currentMonth = today.substring(0, 7);
         const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
         const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
@@ -632,11 +709,22 @@ const App = {
         this.userPresentDays.innerText = stats.present;
         this.userAbsentDays.innerText = stats.absent;
         this.userTotalSalary.innerText = `₹${earnings}`;
+
+        // Update Mobile UI header if active
+        if (this.mobileEmpName) this.mobileEmpName.innerText = currentUser.name;
+        if (this.mobileEmpCode) this.mobileEmpCode.innerText = currentUser.empCode;
+        if (this.mobileEmpAvatar) {
+            this.mobileEmpAvatar.src = currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`;
+        }
+
+        // Render Calendar Strip and Activity if mobile
+        this.renderCalendarStrip();
+        this.renderMobileActivity(currentUser.id, attendance);
     },
 
     async renderPayroll() {
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = now.toLocaleDateString('en-CA').substring(0, 7);
         const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
         const payrollData = await Storage.getMonthlyPayroll(selectedMonth);
         const payrollBody = document.getElementById('payroll-list-body');
@@ -688,7 +776,7 @@ const App = {
 
         container.innerHTML = activeEmps.map(emp => `
             <div class="whos-in-card">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}">
+                <img src="${emp.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}">
                 <div class="whos-in-info">
                     <h4>${emp.name}</h4>
                     <span>${emp.dept}</span>
@@ -704,7 +792,7 @@ const App = {
         this.statAbsent.innerText = stats.absent;
 
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = now.toLocaleDateString('en-CA').substring(0, 7);
         const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
         const payrollData = await Storage.getMonthlyPayroll(selectedMonth);
         const totalVal = payrollData.reduce((sum, emp) => sum + emp.earnings, 0);
@@ -718,7 +806,7 @@ const App = {
             <tr>
                 <td>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}" style="width: 30px; height: 30px; border-radius: 50%;">
+                        <img src="${emp.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
                         <span>${emp.name}</span>
                     </div>
                 </td>
@@ -742,7 +830,7 @@ const App = {
         const attendance = await Storage.getAttendance();
         const employees = await Storage.getEmployees();
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = now.toLocaleDateString('en-CA').substring(0, 7);
         const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
 
         const filteredAttendance = attendance.filter(a => a.date.startsWith(selectedMonth));
@@ -790,7 +878,7 @@ const App = {
     async renderRecentActivity() {
         const allAttendance = await Storage.getAttendance();
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = now.toLocaleDateString('en-CA').substring(0, 7);
         const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
         const filteredAttendance = allAttendance.filter(a => a.date.startsWith(selectedMonth));
         const attendance = filteredAttendance.slice(-5).reverse();
