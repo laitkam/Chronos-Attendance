@@ -113,7 +113,8 @@ const Storage = {
     },
 
     async checkIn(employeeId) {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await this.getAttendance();
 
         const existingRecord = attendance.find(a => a.employeeId === employeeId && a.date === today);
@@ -136,7 +137,8 @@ const Storage = {
     },
 
     async checkOut(employeeId) {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await this.getAttendance();
 
         const record = attendance.find(a => a.employeeId === employeeId && a.date === today);
@@ -151,45 +153,102 @@ const Storage = {
     async getTodayStats() {
         const employees = await this.getEmployees();
         const attendance = await this.getAttendance();
-        const today = new Date().toISOString().split('T')[0];
+
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const currentMonth = today.substring(0, 7); // "YYYY-MM"
 
         const presentToday = attendance.filter(a => a.date === today).length;
         const totalEmployees = employees.length;
+
+        // Current month stats
+        const monthAttendance = attendance.filter(a => a.date.startsWith(currentMonth));
+        let totalMonthlyPayroll = 0;
+        employees.forEach(emp => {
+            const empMonthAtt = monthAttendance.filter(a => a.employeeId === emp.id);
+            totalMonthlyPayroll += (empMonthAtt.length * (emp.salary || 0));
+        });
 
         return {
             total: totalEmployees,
             present: presentToday,
             absent: totalEmployees - presentToday,
-            late: attendance.filter(a => a.date === today && a.checkIn > '09:00:00').length
+            late: attendance.filter(a => a.date === today && a.checkIn > '09:00:00').length,
+            monthlyPayroll: totalMonthlyPayroll
         };
     },
 
     async loginEmployee(username, pin) {
         const employees = await this.getEmployees();
-        const emp = employees.find(e => (e.empCode === username || e.name === username) && e.pin === pin);
-        return emp || null;
+        const searchInput = username.trim().toLowerCase();
+
+        const emp = employees.find(e =>
+            (e.empCode && e.empCode.toLowerCase().trim() === searchInput) ||
+            (e.name && e.name.toLowerCase().trim() === searchInput)
+        );
+
+        if (emp && String(emp.pin) === String(pin)) {
+            return emp;
+        }
+        return null;
     },
 
-    async getEmployeeStats(employeeId) {
+    subscribeToAttendance(callback) {
+        db.ref('attendance').on('value', (snapshot) => {
+            const data = snapshot.val();
+            const list = data ? Object.values(data) : [];
+            callback(list);
+        });
+    },
+
+    async getEmployeeStats(employeeId, monthYear = null) {
         const attendance = await this.getAttendance();
-        const empAttendance = attendance.filter(a => a.employeeId === employeeId);
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const targetMonth = monthYear || currentMonth;
+
+        const empAttendance = attendance.filter(a => a.employeeId === employeeId && a.date.startsWith(targetMonth));
 
         const daysPresent = empAttendance.length;
-        // For simplicity, let's assume total days as the number of unique dates in attendance database for now,
-        // or just a fixed number like 30 for the month.
-        // Better: count unique dates in the whole attendance table.
-        const uniqueDates = [...new Set(attendance.map(a => a.date))].length || 1;
+
+        // Calculate days in the month (approximate or accurate)
+        const [year, month] = targetMonth.split('-').map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
 
         return {
             present: daysPresent,
-            absent: Math.max(0, uniqueDates - daysPresent)
+            absent: Math.max(0, daysInMonth - daysPresent), // This is a rough estimate of potential working days
+            totalDays: daysInMonth
         };
+    },
+
+    async getMonthlyPayroll(monthYear) {
+        const employees = await this.getEmployees();
+        const attendance = await this.getAttendance();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const targetMonth = monthYear || currentMonth;
+
+        const monthAttendance = attendance.filter(a => a.date.startsWith(targetMonth));
+
+        return employees.map(emp => {
+            const empMonthAtt = monthAttendance.filter(a => a.employeeId === emp.id);
+            const present = empMonthAtt.length;
+            const earnings = present * (emp.salary || 0);
+            return {
+                ...emp,
+                present,
+                absent: 0, // Could be calculated if we have a shift schedule
+                earnings
+            };
+        });
     },
 
     async getActiveEmployees() {
         const attendance = await this.getAttendance();
         const employees = await this.getEmployees();
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const activeIds = attendance
             .filter(a => a.date === today && !a.checkOut)
             .map(a => a.employeeId);
@@ -199,7 +258,8 @@ const Storage = {
 
     async autoCleanup() {
         const attendance = await this.getAttendance();
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         let changed = false;
 
         attendance.forEach(async (a) => {

@@ -2,10 +2,19 @@
 const App = {
     async init() {
         this.cacheDOM();
+        this.populateMonthSelector();
         this.bindEvents();
         this.checkAuth();
         await Storage.autoCleanup(); // Cleanup old sessions
+
+        // Initial Render
         await this.renderAll();
+
+        // Enable Multi-PC Real-time Sync
+        Storage.subscribeToAttendance(() => {
+            this.renderAll();
+        });
+
         this.updateDateTime();
         setInterval(() => this.updateDateTime(), 1000);
     },
@@ -102,6 +111,9 @@ const App = {
         // User Profile Elements
         this.userNameEl = document.getElementById('current-user-name');
         this.userAvatarEl = document.getElementById('current-user-avatar');
+
+        // Global Filter
+        this.monthSelector = document.getElementById('global-month-selector');
     },
 
     bindEvents() {
@@ -175,6 +187,36 @@ const App = {
                 lucide.createIcons();
             });
         }
+
+        // Global Month Selector
+        if (this.monthSelector) {
+            this.monthSelector.addEventListener('change', () => this.renderAll());
+        }
+    },
+
+    populateMonthSelector() {
+        const selector = this.monthSelector;
+        if (!selector) return;
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        selector.innerHTML = '';
+        for (let i = 0; i < 12; i++) {
+            const date = new Date(currentYear, currentMonth - i, 1);
+            const monthVal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const monthLabel = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const option = document.createElement('option');
+            option.value = monthVal;
+            option.textContent = monthLabel;
+            selector.appendChild(option);
+        }
+
+        // Set default to current month
+        const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        selector.value = defaultMonth;
     },
 
     switchTab(tabId) {
@@ -337,7 +379,8 @@ const App = {
         if (!currentUser) return;
 
         const attendance = await Storage.getAttendance();
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
 
         if (!record) {
@@ -363,7 +406,8 @@ const App = {
                 this.loginError.style.display = 'block';
             }
         } else {
-            const username = this.loginUsername.value;
+            const username = this.loginUsername.value.trim();
+            const pin = this.pinInput.value.trim();
             const emp = await Storage.loginEmployee(username, pin);
             if (emp) {
                 localStorage.setItem('chronos_last_username', username);
@@ -550,7 +594,10 @@ const App = {
 
         this.employeeAttendanceView.style.display = 'block';
         const attendance = await Storage.getAttendance();
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const currentMonth = today.substring(0, 7);
+        const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
         const record = attendance.find(a => a.employeeId === currentUser.id && a.date === today);
 
         if (!record) {
@@ -578,37 +625,36 @@ const App = {
             this.dispTotalHrs.innerText = this.calculateDuration(record.checkIn, record.checkOut);
         }
 
-        // Render Personal Stats
-        const stats = await Storage.getEmployeeStats(currentUser.id);
-        const totalSalary = (stats.present * (currentUser.salary || 0)).toFixed(0);
+        // Render Personal Stats for selected month
+        const stats = await Storage.getEmployeeStats(currentUser.id, selectedMonth);
+        const earnings = (stats.present * (currentUser.salary || 0)).toFixed(0);
 
         this.userPresentDays.innerText = stats.present;
         this.userAbsentDays.innerText = stats.absent;
-        this.userTotalSalary.innerText = `₹${totalSalary}`;
+        this.userTotalSalary.innerText = `₹${earnings}`;
     },
 
     async renderPayroll() {
-        const employees = await Storage.getEmployees();
-        const attendance = await Storage.getAttendance();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
+        const payrollData = await Storage.getMonthlyPayroll(selectedMonth);
         const payrollBody = document.getElementById('payroll-list-body');
         if (!payrollBody) return;
 
-        // Unique dates to calculate absence
-        const uniqueDates = [...new Set(attendance.map(a => a.date))].length || 1;
+        // Calculate days in the selected month
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
 
-        payrollBody.innerHTML = employees.map(emp => {
-            const empAtt = attendance.filter(a => a.employeeId === emp.id);
-            const daysPresent = empAtt.length;
-            const daysAbsent = Math.max(0, uniqueDates - daysPresent);
-            const totalEarnings = (daysPresent * (emp.salary || 0)).toFixed(2);
-
+        payrollBody.innerHTML = payrollData.map(emp => {
+            const absent = Math.max(0, daysInMonth - emp.present);
             return `
                 <tr>
                     <td>${emp.name}</td>
                     <td>₹${emp.salary || 0}</td>
-                    <td>${daysPresent}</td>
-                    <td style="color: var(--accent-red)">${daysAbsent}</td>
-                    <td><strong>₹${totalEarnings}</strong></td>
+                    <td>${emp.present}</td>
+                    <td style="color: var(--accent-red)">${absent}</td>
+                    <td><strong>₹${emp.earnings.toLocaleString('en-IN')}</strong></td>
                 </tr>
             `;
         }).join('');
@@ -657,14 +703,12 @@ const App = {
         this.statPresent.innerText = stats.present;
         this.statAbsent.innerText = stats.absent;
 
-        // Calculate Total Payroll for the stat card
-        const employees = await Storage.getEmployees();
-        const attendance = await Storage.getAttendance();
-        let totalVal = 0;
-        employees.forEach(emp => {
-            const days = attendance.filter(a => a.employeeId === emp.id && a.status !== 'Absent').length;
-            totalVal += (days * (emp.salary || 0));
-        });
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
+        const payrollData = await Storage.getMonthlyPayroll(selectedMonth);
+        const totalVal = payrollData.reduce((sum, emp) => sum + emp.earnings, 0);
+
         this.statPayroll.innerText = `₹${totalVal.toLocaleString('en-IN')}`;
     },
 
@@ -697,8 +741,13 @@ const App = {
     async renderLogs() {
         const attendance = await Storage.getAttendance();
         const employees = await Storage.getEmployees();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
 
-        this.logsListBody.innerHTML = attendance.map(a => {
+        const filteredAttendance = attendance.filter(a => a.date.startsWith(selectedMonth));
+
+        this.logsListBody.innerHTML = filteredAttendance.map(a => {
             const emp = employees.find(e => e.id === a.employeeId);
             return `
                 <tr>
@@ -740,10 +789,14 @@ const App = {
 
     async renderRecentActivity() {
         const allAttendance = await Storage.getAttendance();
-        const attendance = allAttendance.slice(-5).reverse();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const selectedMonth = this.monthSelector ? this.monthSelector.value : currentMonth;
+        const filteredAttendance = allAttendance.filter(a => a.date.startsWith(selectedMonth));
+        const attendance = filteredAttendance.slice(-5).reverse();
         const employees = await Storage.getEmployees();
 
-        this.recentActivityList.innerHTML = attendance.map(a => {
+        this.recentActivityList.innerHTML = attendance.length ? attendance.map(a => {
             const emp = employees.find(e => e.id === a.employeeId);
             const isCheckOut = !!a.checkOut;
             return `
@@ -751,11 +804,11 @@ const App = {
                     <div class="activity-dot ${isCheckOut ? 'red' : 'green'}"></div>
                     <div class="activity-details">
                         <p>${emp ? emp.name : 'User'} ${isCheckOut ? 'Checked Out' : 'Checked In'}</p>
-                        <span>${isCheckOut ? a.checkOut : a.checkIn} - Today</span>
+                        <span>${isCheckOut ? a.checkOut : a.checkIn} - ${a.date}</span>
                     </div>
                 </li>
             `;
-        }).join('');
+        }).join('') : '<li style="color: var(--text-muted); padding: 10px;">No activity for this month.</li>';
     },
 
     async editEmployee(id) {

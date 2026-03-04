@@ -436,6 +436,29 @@ body {
     object-fit: cover;
 }
 
+.month-select-input {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 8px 12px;
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.month-select-input:hover {
+    border-color: var(--accent-blue);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.month-select-input option {
+    background: var(--sidebar-bg);
+    color: var(--text-main);
+}
+
 /* Tab Content */
 .tab-content {
     display: none;
